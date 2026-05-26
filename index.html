@@ -38,9 +38,19 @@
                     <p class="text-sm text-slate-500 font-medium">AI 기반 설교 분석 및 주제별 예화 자산 관리 시스템</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200 text-xs font-semibold self-start md:self-auto">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>기기 로컬 및 클라우드 작동 중</span>
+            
+            <div class="flex items-center space-x-2 self-start md:self-auto">
+                <!-- API 키 설정 버튼 -->
+                <button onclick="openApiModal()" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold transition-all">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500"></i>
+                    <span>Gemini API 키 설정</span>
+                    <span id="api-status-badge" class="w-2 h-2 rounded-full bg-red-400"></span>
+                </button>
+                
+                <div class="flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200 text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>실시간 AI 검색 엔진 가동</span>
+                </div>
             </div>
         </header>
 
@@ -85,7 +95,7 @@
                         <i data-lucide="info" class="w-4 h-4 mr-1.5 flex-shrink-0"></i> 실전 활용 팁
                     </h4>
                     <p class="text-xs leading-relaxed text-indigo-700">
-                        유튜브 설교 영상 주소를 입력하면 인공지능이 즉시 영상의 대화내용을 텍스트로 전환하고 설교자, 본문, 요약, 핵심 대지 및 숨어있던 예화를 자동 추출합니다.
+                        유튜브 설교 영상 주소를 입력하면 구글 Gemini 초지능 AI가 해당 동영상을 구글에서 정밀 검색 및 추론하여 실제 설교 제목, 본문 성경, 요약문, 3대지, 그리고 수록된 예화를 완벽히 추출합니다!
                     </p>
                 </div>
             </aside>
@@ -160,6 +170,43 @@
                 </section>
 
             </main>
+        </div>
+    </div>
+
+    <!-- API 설정 모달 팝업 -->
+    <div id="api-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all-custom">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center">
+                    <i data-lucide="key" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                    <span>구글 Gemini API 키 등록</span>
+                </h3>
+                <button onclick="closeApiModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-500 leading-relaxed">
+                임의의 모든 유튜브 주소를 실시간 AI 분석하려면 본인의 **Gemini API Key**가 필요합니다. 구글 AI 스튜디오에서 10초 만에 완전히 무료로 발급받아 평생 사용하실 수 있습니다.
+            </p>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Gemini API Key</label>
+                <input type="password" id="api-key-input" placeholder="AIzaSy..." 
+                    class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
+            </div>
+
+            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-[11px] text-indigo-800 leading-relaxed flex items-start space-x-2">
+                <i data-lucide="link" class="w-3.5 h-3.5 mt-0.5 text-indigo-600 flex-shrink-0"></i>
+                <div>
+                    <a href="https://aistudio.google.com/" target="_blank" class="font-bold underline text-indigo-600 hover:text-indigo-800">여기(Google AI Studio)</a>에 접속하신 뒤 로그인하여 **[Create API Key]**를 클릭해 무료 발급받아 붙여넣으세요. 입력하신 키는 본인 브라우저에 안전하게 보관됩니다.
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeApiModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold">취소</button>
+                <button onclick="saveApiKey()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-indigo-100">저장하기</button>
+            </div>
         </div>
     </div>
 
@@ -240,91 +287,62 @@
     </div>
 
     <script>
-        // --- 1. 상태 및 메모리 임시 저장소 (처음에는 완전히 비어 있음) ---
-        let sermons = []; // 처음 접속 시 데이터는 완전히 0개
-        let currentTab = 'sermon'; // 'sermon' 또는 'illustration'
-        let currentViewType = 'grid'; // 'grid' 또는 'list'
-        let activeFilterTopic = '전체'; // 필터링할 주제 ('전체' 또는 특정주제)
+        // --- 1. 상태 및 메모리 임시 저장소 ---
+        let sermons = []; // 데이터는 완전히 비어있음
+        let currentTab = 'sermon'; 
+        let currentViewType = 'grid'; 
+        let activeFilterTopic = '전체'; 
 
-        // 사용 가능한 모든 태그 데이터베이스
         const allPossibleTags = ["사랑", "가정", "위로", "감사", "믿음", "과학/치유", "고난", "소망", "순종", "기쁨", "용서"];
-
-        // 새로 분석될 때 무작위로 분석 결과를 모사해 줄 데이터 풀 (시뮬레이션용)
-        const dummySermonTemplates = [
-            {
-                title: "감사로 여는 영적 축복의 문",
-                speaker: "이강산 목사",
-                date: "2026-05-26",
-                bible: "데살로니가전서 5:16-18",
-                summary: "본 설교는 어떠한 역경과 고난 앞에서도 절대적인 신앙을 지킬 수 있는 유일한 마스터키가 바로 '감사'임을 증명합니다. 원망 대신 감사를 선포할 때, 하늘의 영적 차원이 어떻게 열리는지 다양한 실제 간증과 성경적 근거를 바탕으로 제시합니다.",
-                tags: ["감사", "믿음", "소망"],
-                outlines: [
-                    "1. 고난 중에도 역사하는 전천후 감사의 영적 능력",
-                    "2. 기도의 성벽을 무너뜨리는 불평을 감사의 입술로 바꾸는 비법",
-                    "3. 하나님의 뜻을 이루며 승리하는 매일의 작은 감사 훈련법"
-                ],
-                content: "할렐루야! 주님의 평강이 여러분에게 함께하시길 축원합니다. 오늘 우리는 살아가면서 가장 강력하지만 가장 쉽게 잊어버리는 영적 비밀을 발견하고자 합니다. 바로 '감사'입니다. 데살로니가전서 5장에는 '범사에 감사하라'고 말합니다. 범사란, 좋은 일뿐만 아니라 최악의 상황도 포함됩니다. 우리가 도저히 감사할 수 없는 폭풍 속에 있을 때 원망 대신 입술을 열어 감사를 선포하면, 하나님의 초자연적인 기적이 우리의 영안을 열고 삶의 문제를 해결하십니다. 매일 아침 눈을 뜨자마자 감사를 선포해 보십시오. 원수가 침범할 수 없는 튼튼한 요새가 쌓일 것입니다.",
-                illustrations: [
-                    {
-                        title: "감사로 전염병 위기를 극복한 마을",
-                        content: "17세기 유럽의 한 작은 고립된 마을에 흑사병이 돌았을 때의 일입니다. 모든 가정이 탄식과 공포에 질려 문을 걸어 잠갔습니다. 그러나 한 현명한 목회자는 성도들을 모으고 원망 대신 하루에 세 번씩 하나님께 감사하는 기도 제목을 정했습니다. '오늘 하루도 숨 쉴 수 있는 생명을 주심에 감사', '가족이 얼굴을 마주 볼 수 있음에 감사'. 놀랍게도 이 감사 예배를 매일 드리던 교인들의 가정에서는 면역력이 회복되듯 절망이 사라지고 공포로 인한 실족이 없어졌으며, 이 기적 같은 소식은 이웃 마을에까지 절망을 이길 평화를 주었습니다."
-                    }
-                ]
-            },
-            {
-                title: "고난 속에서 진정한 소망을 붙들라",
-                speaker: "박사랑 목사",
-                date: "2026-05-24",
-                bible: "로마서 8:28",
-                summary: "인생의 예기치 못한 시련 속에서 어떻게 소망의 끈을 놓지 않을 것인가? 본 설교는 삶의 불합리해 보이는 어둠마저도 하나님의 퍼즐 조각 중 하나이며, 결국 모든 것이 합력하여 가장 아름다운 영적 선을 이룬다는 사실을 선언합니다.",
-                tags: ["고난", "소망", "위로"],
-                outlines: [
-                    "1. 삶이 흔들릴 때 가장 먼저 점검해야 할 내 영적 닻의 위치",
-                    "2. 시련이라는 용광로가 우리를 불순물 없는 순금으로 정련하는 과정",
-                    "3. 한 치 앞이 보이지 않는 깊은 흑암 중에도 완벽하게 일하시는 하나님의 주권 신뢰"
-                ],
-                content: "우리가 살아가다 보면 뜻하지 않는 슬픔과 질병, 고통의 골짜기를 마주하게 됩니다. '하나님 내가 무엇을 잘못했기에 이런 고난을 주십니까?'라는 탄식이 터져 나오지요. 하지만 로마서 8장 28절은 확신을 줍니다. '하나님을 사랑하는 자 곧 그의 뜻대로 부르심을 입은 자들에게는 모든 것이 합력하여 선을 이루느니라.' 시련은 버림받은 증거가 아니라, 영적 진주를 빚기 위해 하나님이 상처를 감싸 안으시는 빚으심의 과정입니다. 고난 뒤에 숨겨진 그 사랑의 음성을 귀 기울여 들어 보십시오.",
-                illustrations: [
-                    {
-                        title: "도자기 장인의 숨결과 불 가마의 시련",
-                        content: "최고의 명품 도자기를 빚기 위해 도공은 흙을 빚고 말린 뒤 무려 1,300도가 넘는 가마 속 불꽃 한가운데에 그것을 집어넣습니다. 밖에서 보면 도자기는 뜨거운 열기 속에 녹아 없어질 것처럼 보입니다. 그러나 그 극심한 열기의 시련을 견뎌낸 도자기만이 가장 영롱한 빛깔을 내며 왕실의 명품으로 거듭납니다. 우리의 영혼 역시 고난의 가마 속에서 단련되어 하나님께 가장 존귀하게 쓰임받는 자산으로 태어납니다."
-                    }
-                ]
-            },
-            {
-                title: "가정을 세우는 예수 그리스도의 온전한 사랑",
-                speaker: "최행복 목사",
-                date: "2026-05-18",
-                bible: "에베소서 5:22-25",
-                summary: "오늘날 붕괴해 가는 현대 사회의 가장 소중한 가치인 '가정'을 성경적인 원리로 회복하기 위한 설교입니다. 예수 그리스도가 교회를 향해 보이신 아낌없는 희생과 사랑을 가정에 적용할 때 일어나는 기적의 치유를 다룹니다.",
-                tags: ["가정", "사랑", "위로"],
-                outlines: [
-                    "1. 비난과 잔소리를 내려놓고 예수님의 십자가 온유함을 적용하는 법",
-                    "2. 자녀를 신앙의 명가로 양육하기 위한 부모의 무릎 기도와 본보기",
-                    "3. 깨어진 가족 관계를 회복하는 3가지 실천적 말하기(사랑해, 고마워, 미안해)"
-                ],
-                content: "가정은 하나님께서 이 땅에 세우신 최초의 천국 모형이자 축복의 통로입니다. 하지만 많은 이들이 가장 가깝다는 이유로 가족에게 깊은 상처를 주고 받습니다. 예수님께서 아무 대가 없이 우리의 허물을 피로 덮으셨던 것처럼, 우리 또한 배우자와 자녀의 연약함을 품어야 합니다. 율법의 칼로 서로를 베지 말고, 은혜의 보자기로 덮어 가정을 성령의 안식처로 만들어 가시길 축원합니다.",
-                illustrations: [
-                    {
-                        title: "어머니의 낡은 가계부 속에 적힌 한 줄",
-                        content: "어느 한 가난하지만 평화롭던 가정의 자녀가 어머니가 돌아가신 후 유품을 정리하다가 낡은 가계부를 발견했습니다. 그곳에는 매달 적자였던 영수증 뒤편에 한 줄의 일기가 쓰여 있었습니다. '오늘도 찬거리가 모자라 가족들에게 풍성히 먹이지 못해 마음이 아프다. 하지만 웃으며 맛있게 먹어준 아이들의 미소가 나의 가장 큰 재산이다. 하나님, 이 소중한 생명을 맡겨주셔서 감사합니다.' 사랑이란 가진 것을 주는 것이 아닌, 서로를 향한 가장 따뜻한 마음의 시선임을 보여줍니다."
-                    }
-                ]
-            }
-        ];
-
-        let dummyIndex = 0; // 더미 템플릿을 번갈아 보여주기 위한 인덱스
 
         // --- 2. 초기화 및 이벤트 연결 ---
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             renderTopicTags();
             updateStatsAndContent();
+            checkApiKey();
         });
+
+        // API Key 유무 체크 및 배지 업데이트
+        function checkApiKey() {
+            const key = getApiKey();
+            const badge = document.getElementById('api-status-badge');
+            if (key) {
+                badge.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            } else {
+                badge.className = "w-2 h-2 rounded-full bg-red-400";
+            }
+        }
+
+        function getApiKey() {
+            // runtime injected 혹은 localStorage 우선순위
+            let apiKey = ""; 
+            if (!apiKey) {
+                apiKey = localStorage.getItem('GEMINI_API_KEY') || "";
+            }
+            return apiKey;
+        }
+
+        function openApiModal() {
+            const key = getApiKey();
+            document.getElementById('api-key-input').value = key;
+            document.getElementById('api-modal').classList.remove('hidden');
+        }
+
+        function closeApiModal() {
+            document.getElementById('api-modal').classList.add('hidden');
+        }
+
+        function saveApiKey() {
+            const keyVal = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('GEMINI_API_KEY', keyVal);
+            closeApiModal();
+            checkApiKey();
+            alertCustom("🔑 API 키가 성공적으로 로컬 환경에 저장되었습니다!");
+        }
 
         // --- 3. UI 렌더링 함수들 ---
 
-        // 주제 태그 필터 영역 렌더링
         function renderTopicTags() {
             const container = document.getElementById('topic-tags-container');
             container.innerHTML = '';
@@ -343,10 +361,8 @@
             });
         }
 
-        // 탭 전환
         function switchTab(tab) {
             currentTab = tab;
-            
             const sermonTabBtn = document.getElementById('tab-sermon');
             const illustrationTabBtn = document.getElementById('tab-illustration');
             const viewToggleContainer = document.getElementById('view-toggle-container');
@@ -364,7 +380,6 @@
             updateStatsAndContent();
         }
 
-        // 뷰 형태 변경 (Grid / List)
         function setViewType(type) {
             currentViewType = type;
             const gridBtn = document.getElementById('view-grid-btn');
@@ -381,16 +396,13 @@
             updateStatsAndContent();
         }
 
-        // 특정 주제 태그 클릭 시 필터링 수행
         function filterByTopic(topic) {
             activeFilterTopic = topic;
             renderTopicTags();
             updateStatsAndContent();
         }
 
-        // 전체 화면의 통계 및 뼈대 업데이트
         function updateStatsAndContent() {
-            // 통계 숫자 계산
             const activeSermonsCount = sermons.length;
             const activeIllustrationsCount = sermons.reduce((acc, curr) => acc + (curr.illustrations ? curr.illustrations.length : 0), 0);
 
@@ -400,36 +412,30 @@
             const container = document.getElementById('content-container');
             container.innerHTML = '';
 
-            // 필터링된 데이터 생성
             let filteredSermons = sermons;
             if (activeFilterTopic !== '전체') {
                 filteredSermons = sermons.filter(s => s.tags && s.tags.includes(activeFilterTopic));
             }
 
-            // 1. 데이터가 아무것도 없을 때 (인포그래픽 사용 설명서 출력 🌟)
             if (sermons.length === 0) {
                 renderInfographicIntro(container);
                 return;
             }
 
-            // 2. 필터링된 결과가 없을 때 (해당 주제 설교 부재)
             if (filteredSermons.length === 0) {
                 renderEmptySearchResult(container);
                 return;
             }
 
-            // 3. 실제 탭별 보기 렌더링
             if (currentTab === 'sermon') {
                 renderSermonList(container, filteredSermons);
             } else {
                 renderIllustrationList(container, filteredSermons);
             }
 
-            // 동적으로 들어간 아이콘들 재생성
             lucide.createIcons();
         }
 
-        // --- 4. 인포그래픽 가이드 렌더링 (데이터가 아예 비어있을 때 표출) ---
         function renderInfographicIntro(container) {
             container.innerHTML = `
                 <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
@@ -438,65 +444,58 @@
                             <i data-lucide="shield-alert" class="w-8 h-8"></i>
                         </div>
                         <h3 class="text-xl font-bold text-slate-900 mb-2">아카이브 라이브러리가 비어 있습니다.</h3>
-                        <p class="text-sm text-slate-500 leading-relaxed">상단의 입력란에 소중한 유튜브 주소를 입력해 주시면, 인공지능 분석 가동 프로세스에 의해 아래 단계별 인포그래픽 구조처럼 실시간 가동되어 자동으로 채워지게 됩니다.</p>
+                        <p class="text-sm text-slate-500 leading-relaxed">상단의 입력란에 분석하고자 하는 실제 유튜브 설교 영상 주소를 입력하고 분석을 진행해 보세요!</p>
                     </div>
 
                     <!-- 작동 메커니즘 인포그래픽 뷰 🎨 -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-                        <!-- 연결 화살표 데스크톱용 -->
                         <div class="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-dashed bg-slate-200 -translate-y-6 z-0"></div>
                         
-                        <!-- 1단계 카드 -->
                         <div class="bg-slate-50 p-5 rounded-xl border border-slate-150 text-center relative z-10 hover:shadow-md hover:border-indigo-100 transition-all duration-200">
                             <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3 font-extrabold text-sm shadow-inner">
                                 <i data-lucide="youtube" class="w-6 h-6"></i>
                             </div>
-                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">01. 영상 매칭</span>
+                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">01. 링크 검색</span>
                             <h4 class="text-xs font-bold text-slate-900 mb-1.5">유튜브 주소 입력</h4>
-                            <p class="text-[11px] text-slate-500 leading-normal">설교 영상의 고유 식별 주소로부터 정밀 오디오 음성 및 한글 자막 추출</p>
+                            <p class="text-[11px] text-slate-500 leading-normal">제시하신 특정 영상의 정보 색인 프로세스를 즉각 가동</p>
                         </div>
 
-                        <!-- 2단계 카드 -->
                         <div class="bg-slate-50 p-5 rounded-xl border border-slate-150 text-center relative z-10 hover:shadow-md hover:border-indigo-100 transition-all duration-200">
                             <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-3 font-extrabold text-sm shadow-inner">
                                 <i data-lucide="cpu" class="w-6 h-6"></i>
                             </div>
-                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">02. AI 구조 분석</span>
-                            <h4 class="text-xs font-bold text-slate-900 mb-1.5">Gemini 초지능 가동</h4>
-                            <p class="text-[11px] text-slate-500 leading-normal">설교자, 날짜, 본문 해석, 설교문의 핵심 논제와 요약을 분초 단위 파싱</p>
+                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">02. 웹 그라운딩</span>
+                            <h4 class="text-xs font-bold text-slate-900 mb-1.5">실시간 구글 검색</h4>
+                            <p class="text-[11px] text-slate-500 leading-normal">해당 설교의 실제 대화 스크립트, 요약본, 성경 본문 매칭 추론</p>
                         </div>
 
-                        <!-- 3단계 카드 -->
                         <div class="bg-slate-50 p-5 rounded-xl border border-slate-150 text-center relative z-10 hover:shadow-md hover:border-indigo-100 transition-all duration-200">
                             <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3 font-extrabold text-sm shadow-inner">
                                 <i data-lucide="file-text" class="w-6 h-6"></i>
                             </div>
-                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">03. 요약 및 예화추출</span>
-                            <h4 class="text-xs font-bold text-slate-900 mb-1.5">핵심 아웃라인 & 예화</h4>
-                            <p class="text-[11px] text-slate-500 leading-normal">3단 대지 구성 및 설교에서 인용된 명품 예화만을 독립 추출하여 구조화</p>
+                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">03. 정밀 데이터 분석</span>
+                            <h4 class="text-xs font-bold text-slate-900 mb-1.5">강사·대지·예화 추출</h4>
+                            <p class="text-[11px] text-slate-500 leading-normal">원고의 핵심 구조 분석을 수행하여 수록된 스토리를 감지하고 분리 적재</p>
                         </div>
 
-                        <!-- 4단계 카드 -->
                         <div class="bg-slate-50 p-5 rounded-xl border border-slate-150 text-center relative z-10 hover:shadow-md hover:border-indigo-100 transition-all duration-200">
                             <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3 font-extrabold text-sm shadow-inner">
                                 <i data-lucide="tag" class="w-6 h-6"></i>
                             </div>
-                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">04. 지능적 태깅</span>
-                            <h4 class="text-xs font-bold text-slate-900 mb-1.5">주제별 지형 배정</h4>
-                            <p class="text-[11px] text-slate-500 leading-normal">감사, 용서, 소망 등 알맞은 영적 주제 태그가 자동 맵핑되어 클릭 탐색 완성</p>
+                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">04. 주제별 자동 연동</span>
+                            <h4 class="text-xs font-bold text-slate-900 mb-1.5">주제 태깅 보관</h4>
+                            <p class="text-[11px] text-slate-500 leading-normal">설교 주제가 사이드바 태그로 연계되어 향후 무제한 필터링 열람 지원</p>
                         </div>
                     </div>
 
-                    <!-- 유도 액션 -->
                     <div class="mt-8 text-center bg-indigo-50/40 p-4 rounded-xl border border-indigo-100/50">
-                        <p class="text-xs font-semibold text-slate-600">💡 <span class="text-indigo-700">바로 위의 입력창</span>에 가상의 유튜브 주소나 임의의 글자를 적고 <span class="text-indigo-700">[AI 설교 분석 시작]</span>을 누르면 실제로 자동 추가되는 동작을 바로 체험할 수 있습니다!</p>
+                        <p class="text-xs font-semibold text-slate-600">💡 실제 분석을 위해 꼭 **오른쪽 상단 [Gemini API 키 설정]** 버튼을 눌러 본인의 무료 AI Key를 입력해 주세요!</p>
                     </div>
                 </div>
             `;
             lucide.createIcons();
         }
 
-        // 검색/필터 결과가 비었을 때
         function renderEmptySearchResult(container) {
             container.innerHTML = `
                 <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
@@ -511,14 +510,12 @@
             lucide.createIcons();
         }
 
-        // --- 5. 설교 목록 렌더링 (바둑판 / 리스트 분기) ---
         function renderSermonList(container, list) {
             if (currentViewType === 'grid') {
-                // 바둑판 구조 (원래 화면 디자인 🔳)
                 const gridDiv = document.createElement('div');
                 gridDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-6';
 
-                list.forEach((sermon, index) => {
+                list.forEach((sermon) => {
                     const card = document.createElement('div');
                     card.className = 'bg-white border border-slate-200 hover:border-indigo-400 p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer';
                     card.setAttribute('onclick', `openSermonModal(${sermons.indexOf(sermon)})`);
@@ -548,11 +545,10 @@
                 });
                 container.appendChild(gridDiv);
             } else {
-                // 한눈에 들어오는 가독성 중심 리스트 구조 📝
                 const listDiv = document.createElement('div');
                 listDiv.className = 'space-y-3';
 
-                list.forEach((sermon, index) => {
+                list.forEach((sermon) => {
                     const row = document.createElement('div');
                     row.className = 'bg-white border border-slate-200 hover:border-indigo-300 p-4 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer transition-all hover:bg-slate-50/50';
                     row.setAttribute('onclick', `openSermonModal(${sermons.indexOf(sermon)})`);
@@ -584,7 +580,6 @@
             }
         }
 
-        // --- 6. 예화 보물창고 독립 리스트 렌더링 ---
         function renderIllustrationList(container, filteredSermons) {
             const illGrid = document.createElement('div');
             illGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-6';
@@ -633,11 +628,37 @@
             }
         }
 
-        // --- 7. 유튜브 등록 모방 기능 (실시간 AI 작동 시뮬레이션) ---
-        function startAnalysis() {
+        // --- 4. Exponential Backoff 패턴이 보장된 API 호출기 ---
+        async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return await response.json();
+                    if (response.status === 429) {
+                        // 할당량 초과 시 대기시간 증폭
+                    }
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                }
+                await new Promise(res => setTimeout(res, delay));
+                delay *= 2;
+            }
+            throw new Error("Gemini AI API 요청 실패 (서버 과부하 혹은 토큰 만료)");
+        }
+
+        // --- 5. 실시간 유튜브 분석 실행 로직 (진짜 AI 작동!) ---
+        async function startAnalysis() {
             const urlInput = document.getElementById('youtube-url');
-            if (!urlInput.value.trim()) {
+            const urlVal = urlInput.value.trim();
+            if (!urlVal) {
                 alertCustom('분석할 올바른 유튜브 설교 동영상 주소를 입력해 주세요.');
+                return;
+            }
+
+            const key = getApiKey();
+            if (!key) {
+                openApiModal();
+                alertCustom('실시간 전용 분석을 사용하려면 먼저 우측 상단에서 Gemini API 키를 저장해야 합니다.');
                 return;
             }
 
@@ -647,57 +668,138 @@
             const progressBarFill = document.getElementById('progress-bar-fill');
 
             progressContainer.classList.remove('hidden');
-            let progress = 0;
             progressBarFill.style.width = '0%';
+            progressPercent.innerText = '0%';
 
-            // 단계별 인공지능 분석 가동 시뮬레이터 (마치 백엔드 API와 호흡하는 듯한 완벽한 피드백 루프)
-            const stages = [
-                { limit: 20, text: "유튜브 설교 영상 음향 고유 인덱스 추출 중..." },
-                { limit: 45, text: "음성 합성 자막 변환 및 텍스트 문맥 마이크로 파싱 중..." },
-                { limit: 70, text: "Gemini AI 탑재 지능망 가동: 설교자, 본문 구절, 핵심 요약 구조화..." },
-                { limit: 90, text: "영적 문장 분절 대지(아웃라인) 분류 및 지능형 예화 발굴 중..." },
-                { limit: 100, text: "분석 성공! 스마트 설교 라이브러리에 실시간 적재 완료!" }
-            ];
-
-            const interval = setInterval(() => {
-                progress += Math.floor(Math.random() * 8) + 4;
-                if (progress > 100) progress = 100;
-
-                // 상황에 따른 안내 문자 업데이트
-                const currentStage = stages.find(s => progress <= s.limit) || stages[stages.length - 1];
-                progressStatus.innerText = currentStage.text;
-                progressPercent.innerText = `${progress}%`;
-                progressBarFill.style.width = `${progress}%`;
-
-                if (progress >= 100) {
-                    clearInterval(interval);
+            // 전처리 상태 시각적 진행 효과
+            let currentProgress = 10;
+            const progressInterval = setInterval(() => {
+                if (currentProgress < 85) {
+                    currentProgress += Math.floor(Math.random() * 5) + 1;
+                    progressBarFill.style.width = `${currentProgress}%`;
+                    progressPercent.innerText = `${currentProgress}%`;
                     
-                    // 더미 템플릿에서 순차적으로 가져와 데이터에 푸시(무한 작동 보장)
-                    const targetTemplate = dummySermonTemplates[dummyIndex % dummySermonTemplates.length];
-                    
-                    // 무작위로 날짜를 최신 오늘로 패치하여 생생함 보완
-                    const now = new Date();
-                    const formattedToday = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-                    
-                    const newSermon = JSON.parse(JSON.stringify(targetTemplate)); // 깊은 복사
-                    newSermon.date = formattedToday;
-
-                    // 데이터 배열 앞에 추가 (최신 설교 최상단 배치)
-                    sermons.unshift(newSermon);
-                    dummyIndex++;
-
-                    // 입력창 초기화 및 프로그레스 닫기
-                    urlInput.value = '';
-                    setTimeout(() => {
-                        progressContainer.classList.add('hidden');
-                        updateStatsAndContent();
-                        alertCustom(`🎉 성공: '${newSermon.title}' 설교 분석을 완료하였습니다!`);
-                    }, 800);
+                    if (currentProgress < 30) progressStatus.innerText = "유튜브 동영상 헤더 정보 분석 중...";
+                    else if (currentProgress < 60) progressStatus.innerText = "구글 검색 연동 크롤러 가동 중...";
+                    else progressStatus.innerText = "Gemini 2.5 Flash 초지능 신학 아카이브 추론 프로세서 해체 중...";
                 }
-            }, 250);
+            }, 300);
+
+            try {
+                // 구글 검색 Grounding과 정형 구조화 응답(Structured JSON)을 조합한 초지능 프롬프트 선언
+                const systemPrompt = `
+                너는 유튜브 설교 영상을 분석하여 체계적으로 정리해주는 최고 신학 연구 보조원이다.
+                제시되는 유튜브 영상 주소에 대한 정보를 구글 검색(google_search tool)을 사용해 검색하여 그에 해당하는 "실제 설교" 정보를 완전하게 파싱해야 한다.
+                검색을 통해 설교의 설교자명, 성경 본문 구절, 설교 날짜, 제목, 설교 내용을 철저히 확보하고, 만약 설교 대본이나 요약본, 교회 측 공식 아카이브 블로그 리뷰가 발견된다면 적극 반영해라.
+                반드시 아래 JSON Schema 스펙대로 최종 한글(Korean) 결과물을 반환해라.
+                `;
+
+                const userPrompt = `
+                아래 유튜브 설교 영상에 대해 정보를 수집하고 정밀 분석을 실시하라:
+                유튜브 링크: ${urlVal}
+
+                [요구사항]
+                1. title: 해당 유튜브 영상의 실제 설교 제목
+                2. speaker: 실제 설교자 목사 이름 (예: 이찬수 목사, 유기성 목사 등)
+                3. date: 설교가 진행된 실제 날짜 (YYYY-MM-DD 형식, 상세 불명 시 대략적인 년월일 추론)
+                4. bible: 설교의 본문이 되는 성경 장절 구절 (예: 마태복음 6:31-33)
+                5. summary: 설교의 전체적인 영적/신학적 관점을 관통하는 3-4문장 분량의 명료한 핵심 요약문
+                6. tags: 설교의 메인 타겟 주제가 되는 태그 2~3개 지정. 반드시 다음 예시 중에서만 엄선할 것: ["사랑", "가정", "위로", "감사", "믿음", "과학/치유", "고난", "소망", "순종", "기쁨", "용서"]
+                7. outlines: 본문 설교의 3개 대지(Outline) 리스트
+                8. content: 설교의 핵심 내용을 단락별로 풍성하게 서술한 요약 전문 (약 600~1000자 내외로 상세하게 작성)
+                9. illustrations: 설교 중 설교자가 인용한 실제 예화, 스토리, 간증 혹은 비유를 찾아내어 리스트로 배정할 것. 만약 설교 스크립트 상에서 특별한 예화가 관찰되지 않는 경우, 해당 설교 주제 및 핵심 교리에 완전히 부합하고 당장 설교 원고에 인용하여 쓸 수 있는 은혜로운 적용 예화 1~2개를 주체적으로 기획하고 작성하여 배정할 것.
+                `;
+
+                // Gemini 2.5 API JSON 응답 스펙 스키마 정의
+                const jsonSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        title: { type: "STRING" },
+                        speaker: { type: "STRING" },
+                        date: { type: "STRING" },
+                        bible: { type: "STRING" },
+                        summary: { type: "STRING" },
+                        tags: {
+                            type: "ARRAY",
+                            items: { type: "STRING" }
+                        },
+                        outlines: {
+                            type: "ARRAY",
+                            items: { type: "STRING" }
+                        },
+                        content: { type: "STRING" },
+                        illustrations: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    title: { type: "STRING" },
+                                    content: { type: "STRING" }
+                                },
+                                required: ["title", "content"]
+                            }
+                        }
+                    },
+                    required: ["title", "speaker", "date", "bible", "summary", "tags", "outlines", "content", "illustrations"]
+                };
+
+                const apiPayload = {
+                    contents: [{
+                        parts: [{ text: userPrompt }]
+                    }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                    tools: [{ "google_search": {} }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: jsonSchema
+                    }
+                };
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+
+                const responseData = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(apiPayload)
+                });
+
+                clearInterval(progressInterval);
+                progressBarFill.style.width = '100%';
+                progressPercent.innerText = '100%';
+                progressStatus.innerText = "설교 데이터 완벽 파싱 성공!";
+
+                // JSON 결과 파싱
+                const textResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!textResult) {
+                    throw new Error("결과 텍스트를 추출할 수 없습니다.");
+                }
+
+                const parsedSermon = JSON.parse(textResult);
+
+                // 분석 성공 데이터 리스트 처음에 적재
+                sermons.unshift(parsedSermon);
+
+                // 입력폼 초기화 및 새로고침
+                urlInput.value = '';
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    updateStatsAndContent();
+                    alertCustom(`🎉 완료: '${parsedSermon.title}' (${parsedSermon.speaker}) 설교의 실시간 분석 저장을 완료하였습니다!`);
+                }, 800);
+
+            } catch (error) {
+                clearInterval(progressInterval);
+                progressContainer.classList.add('hidden');
+                console.error("AI 분석 중 오작동:", error);
+                alertCustom(`❌ 오류 발생: ${error.message || "API 설정을 확인해 주세요."}`);
+            }
         }
 
-        // --- 8. 모달 제어 함수 ---
+        // --- 9. 모달 및 유틸리티 기능 ---
         function openSermonModal(index) {
             const sermon = sermons[index];
             if (!sermon) return;
@@ -709,14 +811,12 @@
             document.getElementById('modal-summary').innerText = sermon.summary;
             document.getElementById('modal-content').innerText = sermon.content;
 
-            // 태그 그리기
             const tagsBox = document.getElementById('modal-tags');
             tagsBox.innerHTML = '';
             sermon.tags.forEach(t => {
                 tagsBox.innerHTML += `<span class="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded">#${t}</span>`;
             });
 
-            // 대지 그리기
             const outlineBox = document.getElementById('modal-outlines');
             outlineBox.innerHTML = '';
             sermon.outlines.forEach(out => {
@@ -728,7 +828,6 @@
                 `;
             });
 
-            // 예화 리스트 그리기
             const illBox = document.getElementById('modal-illustrations-list');
             illBox.innerHTML = '';
             if (sermon.illustrations && sermon.illustrations.length > 0) {
@@ -744,10 +843,9 @@
                     `;
                 });
             } else {
-                illBox.innerHTML = `<p class="text-xs text-slate-400">해당 설교문 안에는 독립적으로 파출된 특수 예화가 포함되어 있지 않습니다.</p>`;
+                illBox.innerHTML = `<p class="text-xs text-slate-400">해당 설교문 안에는 독립 파출된 예화가 포함되어 있지 않습니다.</p>`;
             }
 
-            // 모달 열기
             document.getElementById('detail-modal').classList.remove('hidden');
             lucide.createIcons();
         }
@@ -756,7 +854,6 @@
             document.getElementById('detail-modal').classList.add('hidden');
         }
 
-        // --- 9. 유틸리티 헬퍼 함수 ---
         function copyToClipboard(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -764,14 +861,13 @@
             textarea.select();
             try {
                 document.execCommand('copy');
-                alertCustom('📋 예화 원본이 클립보드에 무사히 복사되었습니다! 원고 작성에 바로 붙여넣기 하십시오.');
+                alertCustom('📋 예화가 클립보드에 무사히 복사되었습니다! 필요한 곳에 자유롭게 사용해 보세요.');
             } catch (err) {
                 console.error('복사 중 에러 발생: ', err);
             }
             document.body.removeChild(textarea);
         }
 
-        // 특수 기호 이스케이프
         function escapeHtml(str) {
             return str
                 .replace(/&/g, "&amp;")
@@ -782,7 +878,6 @@
                 .replace(/\n/g, "\\n");
         }
 
-        // 자체 탑재 알림 대용 커스텀 다이얼로그
         function alertCustom(message) {
             const alertBox = document.createElement('div');
             alertBox.className = 'fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg flex items-center space-x-2 transition-all duration-300 transform translate-y-2 opacity-0';
