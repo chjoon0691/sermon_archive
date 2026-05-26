@@ -315,7 +315,6 @@
         }
 
         function getApiKey() {
-            // runtime injected 혹은 localStorage 우선순위
             let apiKey = ""; 
             if (!apiKey) {
                 apiKey = localStorage.getItem('GEMINI_API_KEY') || "";
@@ -628,22 +627,32 @@
             }
         }
 
-        // --- 4. Exponential Backoff 패턴이 보장된 API 호출기 ---
+        // --- 4. Exponential Backoff 패턴 및 API 세부 응답 감지 기능 ---
         async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, options);
-                    if (response.ok) return await response.json();
-                    if (response.status === 429) {
-                        // 할당량 초과 시 대기시간 증폭
+                    const responseData = await response.json();
+                    
+                    // 만약 정상 응답(200 OK)이라면 결과 JSON 반환
+                    if (response.ok) {
+                        return responseData;
                     }
+                    
+                    // 정상 응답이 아닐 경우(예: 400 Bad Request, 403 Forbidden 등), 구글의 세부 에러 메시지를 포함해 에러 throw
+                    const errorMsg = responseData.error?.message || `상태 코드 ${response.status}`;
+                    throw new Error(`구글 AI 서버 에러: ${errorMsg}`);
                 } catch (e) {
-                    if (i === retries - 1) throw e;
+                    // 마지막 시도마저 실패했거나 구체적인 세부 에러(예: 키 만료 등)일 때는 대기 없이 즉시 에러 배출
+                    if (i === retries - 1 || e.message.includes("구글 AI 서버 에러")) {
+                        throw e;
+                    }
                 }
+                // 재시도 대기 시간 배수 적용 (Exponential Backoff)
                 await new Promise(res => setTimeout(res, delay));
                 delay *= 2;
             }
-            throw new Error("Gemini AI API 요청 실패 (서버 과부하 혹은 토큰 만료)");
+            throw new Error("Gemini AI API 요청 실패 (네트워크 연결 시간 초과)");
         }
 
         // --- 5. 실시간 유튜브 분석 실행 로직 (진짜 AI 작동!) ---
@@ -757,7 +766,8 @@
                     }
                 };
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+                // 안정적으로 작동하는 정식 릴리즈 모델로 엔드포인트 세팅
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
 
                 const responseData = await fetchWithRetry(apiUrl, {
                     method: 'POST',
@@ -775,7 +785,7 @@
                 // JSON 결과 파싱
                 const textResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!textResult) {
-                    throw new Error("결과 텍스트를 추출할 수 없습니다.");
+                    throw new Error("Gemini AI의 가상 기성 텍스트 변환 결과가 비어있습니다.");
                 }
 
                 const parsedSermon = JSON.parse(textResult);
@@ -795,7 +805,9 @@
                 clearInterval(progressInterval);
                 progressContainer.classList.add('hidden');
                 console.error("AI 분석 중 오작동:", error);
-                alertCustom(`❌ 오류 발생: ${error.message || "API 설정을 확인해 주세요."}`);
+                
+                // 사용자가 에러 내용을 명확하게 알 수 있도록 친절히 에러를 띄웁니다.
+                alertCustom(`❌ 분석 실패: ${error.message || "API 설정을 확인해 주세요."}`);
             }
         }
 
