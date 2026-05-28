@@ -3,108 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 스마트 설교 아카이브</title>
+    <title>설교 아카이브 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .view-list { grid-template-columns: 1fr; }
-        .view-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-    </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800">
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">⛪ 설교 아카이브 분석기</h1>
+        
+        <!-- 입력 섹션 -->
+        <div class="flex gap-2 mb-8">
+            <input type="text" id="youtubeUrl" placeholder="유튜브 설교 영상 URL을 입력하세요" 
+                   class="flex-1 border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 outline-none">
+            <button onclick="analyzeSermon()" 
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">분석하기</button>
+        </div>
 
-    <div class="max-w-6xl mx-auto p-4 md:p-8">
-        <!-- 헤더 -->
-        <header class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-6 flex justify-between items-center">
+        <!-- 결과 표시 섹션 -->
+        <div id="resultArea" class="hidden space-y-6">
+            <div id="metadata" class="bg-blue-50 p-4 rounded-lg">
+                <h2 id="title" class="text-xl font-bold text-blue-900"></h2>
+                <p id="preacher" class="text-blue-700"></p>
+                <p id="dateAndPassage" class="text-sm text-blue-600"></p>
+            </div>
+
             <div>
-                <h1 class="text-xl font-bold">📖 AI 스마트 설교 아카이브</h1>
-                <p class="text-sm text-gray-500">AI 기반 설교 분석 및 주제별 예화 자산 관리 시스템</p>
-            </div>
-            <button class="text-sm bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-bold">Gemini API 키 설정 완료</button>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- 좌측 등록 및 정보 패널 -->
-            <div class="md:col-span-1 space-y-6">
-                <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                    <h2 class="font-bold mb-4">✨ 새로운 설교 등록 및 AI 자동 분석</h2>
-                    <input type="text" id="urlInput" placeholder="유튜브 설교 영상 주소를 입력하세요." class="w-full p-3 border border-gray-300 rounded-lg mb-3 text-sm">
-                    <button onclick="analyzeSermon()" id="analyzeBtn" class="w-full bg-indigo-700 text-white py-3 rounded-lg font-bold hover:bg-indigo-800 transition">AI 설교 분석 시작</button>
-                </section>
+                <h3 class="font-semibold text-gray-700 mb-2">📌 설교 요점</h3>
+                <ul id="outlineList" class="list-decimal pl-5 space-y-1 text-gray-600"></ul>
             </div>
 
-            <!-- 우측 리스트 패널 -->
-            <div class="md:col-span-2">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-lg">분석된 설교문 리스트</h3>
-                        <div class="flex border border-gray-300 rounded-lg overflow-hidden">
-                            <button onclick="setView('grid')" id="gridBtn" class="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold text-xs border-r border-gray-300">바둑판</button>
-                            <button onclick="setView('list')" id="listBtn" class="px-4 py-2 text-gray-600 hover:bg-gray-50 text-xs">리스트</button>
-                        </div>
-                    </div>
-
-                    <div id="sermonContainer" class="grid gap-4 transition-all duration-300 view-grid">
-                        <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
-                            <div class="text-[10px] text-indigo-600 font-bold mb-2">2026-05-26 | 요한일서 4:11-12</div>
-                            <h4 class="font-bold text-sm mb-2">유튜브 분석 성공: 십자가의 참된 사랑</h4>
-                            <p class="text-gray-600 text-xs mb-3">세상 속에서 그리스도의 무조건적인 사랑을 받은 우리가...</p>
-                            <span class="bg-white border px-2 py-1 rounded text-[10px] text-gray-500">#사랑</span>
-                        </div>
-                    </div>
-                </div>
+            <div>
+                <h3 class="font-semibold text-gray-700 mb-2">📖 주요 예화</h3>
+                <div id="illustrations" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
     <script>
-        function setView(view) {
-            const container = document.getElementById('sermonContainer');
-            const gridBtn = document.getElementById('gridBtn');
-            const listBtn = document.getElementById('listBtn');
+        async function analyzeSermon() {
+            const url = document.getElementById('youtubeUrl').value;
+            if (!url) return alert('URL을 입력해주세요.');
 
-            if (view === 'list') {
-                container.classList.remove('view-grid');
-                container.classList.add('view-list');
-                listBtn.classList.add('bg-indigo-50', 'text-indigo-700', 'font-bold');
-                gridBtn.classList.remove('bg-indigo-50', 'text-indigo-700', 'font-bold');
-            } else {
-                container.classList.remove('view-list');
-                container.classList.add('view-grid');
-                gridBtn.classList.add('bg-indigo-50', 'text-indigo-700', 'font-bold');
-                listBtn.classList.remove('bg-indigo-50', 'text-indigo-700', 'font-bold');
-            }
+            // 실제 구현 시에는 이곳에서 백엔드 API를 호출합니다.
+            // const response = await fetch('/api/analyze', { method: 'POST', body: JSON.stringify({ url }) });
+            // const data = await response.json();
+            
+            // 테스트용 예시 데이터 표시
+            const mockData = {
+                metadata: { preacher: "홍길동 목사", title: "믿음의 경주", date: "2026-05-28", text: "히브리서 12:1-2" },
+                outline: [{ index: "1", point: "인내하기", content: "모든 무거운 것을 벗어버리고 인내해야 합니다." }],
+                illustrations: [{ index: "1", title: "마라톤 선수의 끈기", summary: "결승선을 바라보며 달리는 선수의 이야기입니다." }]
+            };
+
+            displayResult(mockData);
         }
 
-        function analyzeSermon() {
-            const url = document.getElementById('urlInput').value;
-            const btn = document.getElementById('analyzeBtn');
-            if (!url) {
-                alert("유튜브 주소를 입력해주세요.");
-                return;
-            }
+        function displayResult(data) {
+            document.getElementById('resultArea').classList.remove('hidden');
+            document.getElementById('title').innerText = data.metadata.title;
+            document.getElementById('preacher').innerText = `설교자: ${data.metadata.preacher}`;
+            document.getElementById('dateAndPassage').innerText = `${data.metadata.date} | 본문: ${data.metadata.text}`;
 
-            btn.disabled = true;
-            btn.innerText = "분석 중...";
-            
-            setTimeout(() => {
-                const container = document.getElementById('sermonContainer');
-                const newCard = document.createElement('div');
-                newCard.className = "bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm";
-                newCard.innerHTML = `
-                    <div class="text-[10px] text-indigo-600 font-bold mb-2">2026-05-28 | 신규 분석</div>
-                    <h4 class="font-bold text-sm mb-2">방금 분석한 설교: ${url.substring(0, 20)}...</h4>
-                    <p class="text-gray-600 text-xs mb-3">AI 분석 결과가 성공적으로 추가되었습니다.</p>
-                    <span class="bg-white border px-2 py-1 rounded text-[10px] text-gray-500">#새분석</span>
-                `;
-                
-                // 기존 내용을 지우지 않고 새 카드를 목록에 추가(prepend)
-                container.prepend(newCard);
-                
-                btn.disabled = false;
-                btn.innerText = "AI 설교 분석 시작";
-                document.getElementById('urlInput').value = "";
-                alert("분석이 완료되었습니다!");
-            }, 1500);
+            const outlineList = document.getElementById('outlineList');
+            outlineList.innerHTML = data.outline.map(o => `<li><strong>${o.point}</strong>: ${o.content}</li>`).join('');
+
+            const illuDiv = document.getElementById('illustrations');
+            illuDiv.innerHTML = data.illustrations.map(i => `
+                <div class="p-3 border-l-4 border-green-500 bg-gray-50">
+                    <p class="font-medium">${i.index}. ${i.title}</p>
+                    <p class="text-sm text-gray-600">${i.summary}</p>
+                </div>
+            `).join('');
         }
     </script>
 </body>
