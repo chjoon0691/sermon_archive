@@ -109,7 +109,7 @@ def text_request(prompt, purpose):
         return (r.text or "").strip()
     return call_gemini(run, purpose)
 
-def transcribe(url, max_minutes, segment_minutes):
+def transcribe_from_youtube(url, max_minutes, segment_minutes):
     chunks = []
     total = (max_minutes + segment_minutes - 1) // segment_minutes
     for i in range(total):
@@ -135,6 +135,12 @@ def transcribe(url, max_minutes, segment_minutes):
         raise RuntimeError("전사 결과가 너무 짧습니다. 영상 접근 제한 또는 Gemini 처리 실패일 수 있습니다.")
     return raw
 
+def clean_manual_transcript(text: str) -> str:
+    text = (text or "").strip()
+    text = re.sub(r"(?m)^\s*\d{1,2}:\d{2}(?::\d{2})?\s*$", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
 def correct(raw):
     out = []
     chunks = split_text(raw)
@@ -142,7 +148,7 @@ def correct(raw):
         prompt = f"""
 다음 한국어 기독교 설교 전사문을 오타, 띄어쓰기, 문장부호, 성경 인명/지명/본문 표기만 자연스럽게 바로잡으십시오.
 원문의 흐름과 설교자의 어투를 보존하고, 요약하거나 내용을 추가하지 마십시오.
-구간 표시는 유지하십시오. 결과는 수정된 설교문 본문만 출력하십시오.
+구간 표시는 있으면 유지하십시오. 결과는 수정된 설교문 본문만 출력하십시오.
 
 전사문 조각 {i}/{len(chunks)}:
 {chunk}
@@ -176,6 +182,7 @@ JSON 형식:
 - 교회/채널: {meta.get("church") or "미입력"}
 - 설교 날짜: {meta.get("date") or "미입력"}
 - 유튜브 주소: {meta.get("youtubeUrl")}
+- 원문 수집 방식: {meta.get("sourceType")}
 
 설교문:
 {corrected[:70000]}
@@ -193,14 +200,14 @@ JSON 형식:
     for k in ["outline", "topics", "applications", "illustrations"]:
         if not isinstance(data.get(k), list):
             data[k] = []
-    data["sourceType"] = "github_actions_gemini_youtube_url"
+    data["sourceType"] = meta.get("sourceType") or "github_actions"
     return data
 
 def sermon_id(date, title):
     return f"{date}-{slugify(title or 'sermon', lowercase=True) or 'sermon'}"[:120].strip("-")
 
 def card_md(item):
-    outline = "\n".join(f"{i+1}. **{o.get('title','대지')}** — {o.get('summary','')}" for i,o in enumerate(item.get("outline", []))) or "대지 정보가 없습니다."
+    outline = "\n".join(f"{i+1}. **{o.get('title','대지')}** — {o.get('summary','')}" for i, o in enumerate(item.get("outline", []))) or "대지 정보가 없습니다."
     apps = "\n".join(f"- {a}" for a in item.get("applications", [])) or "적용점 정보가 없습니다."
     ills = "\n".join(f"- **{x.get('title','예화')}**: {x.get('summary','')}" for x in item.get("illustrations", [])) or "추출된 예화가 없습니다."
     topics = ", ".join(item.get("topics", [])) or "주제 정보가 없습니다."
@@ -299,6 +306,7 @@ def comment(msg):
 
 def main():
     url = issue_value("유튜브 주소")
+    manual_transcript = clean_manual_transcript(issue_value("설교 스크립트 직접 붙여넣기"))
     if not url:
         raise RuntimeError("유튜브 주소를 찾지 못했습니다.")
     meta = {
@@ -310,17 +318,49 @@ def main():
         "date": issue_value("설교 날짜"),
         "memo": issue_value("메모"),
     }
-    max_minutes = to_int(issue_value("최대 처리 시간(분)"), 30, 5, 180)
+    max_minutes = to_int(issue_value("최대 처리 시간(분)"), 15, 5, 180)
     segment_minutes = to_int(issue_value("구간 길이(분)"), 5, 3, 20)
+
     try:
-        comment(f"설교 아카이브 처리를 시작합니다.\\n\\n- 최대 처리 시간: {max_minutes}분\\n- 구간 길이: {segment_minutes}분")
-        raw = transcribe(url, max_minutes, segment_minutes)
+        if manual_transcript and len(manual_transcript) >= 100:
+            meta["sourceType"] = "manual_transcript_from_issue"
+            comment(
+                "설교 아카이브 처리를 시작합니다.\n\n"
+                "- 방식: 설교 스크립트 직접 붙여넣기\n"
+                f"- 입력 분량: 약 {len(manual_transcript):,}자\n\n"
+                "유튜브 영상 직접 처리는 건너뜁니다."
+            )
+            raw = manual_transcript
+        else:
+            meta["sourceType"] = "github_actions_gemini_youtube_url"
+            comment(
+                "설교 아카이브 처리를 시작합니다.\n\n"
+                "- 방식: Gemini YouTube URL 직접 처리\n"
+                f"- 최대 처리 시간: {max_minutes}분\n"
+                f"- 구간 길이: {segment_minutes}분\n\n"
+                "503 오류가 반복되면 Issue의 '설교 스크립트 직접 붙여넣기' 칸에 스크립트를 넣어 다시 시도하세요."
+            )
+            raw = transcribe_from_youtube(url, max_minutes, segment_minutes)
+
         corrected = correct(raw)
         analysis = analyze(corrected, meta)
         item = save(raw, corrected, analysis, meta)
-        comment(f"✅ 설교 아카이브 생성이 완료되었습니다.\\n\\n- 제목: {item['title']}\\n- 설교자: {item['speaker']}\\n- 본문: {item['bibleText']}\\n- 저장 ID: `{item['id']}`\\n\\n잠시 후 GitHub Pages에서 확인할 수 있습니다.")
+        comment(
+            "✅ 설교 아카이브 생성이 완료되었습니다.\n\n"
+            f"- 제목: {item['title']}\n"
+            f"- 설교자: {item['speaker']}\n"
+            f"- 본문: {item['bibleText']}\n"
+            f"- 저장 ID: `{item['id']}`\n"
+            f"- 처리 방식: {item['sourceType']}\n\n"
+            "잠시 후 GitHub Pages에서 확인할 수 있습니다."
+        )
     except Exception as e:
-        comment(f"❌ 설교 아카이브 생성 중 오류가 발생했습니다.\\n\\n```text\\n{e}\\n```\\n\\nGemini 503 혼잡 오류라면 10~30분 뒤 Issue를 다시 편집하거나, 최대 처리 시간을 줄여 다시 시도해 보세요.")
+        comment(
+            "❌ 설교 아카이브 생성 중 오류가 발생했습니다.\n\n"
+            f"```text\n{e}\n```\n\n"
+            "Gemini YouTube URL 처리에서 503 오류가 반복된다면, Issue를 편집해서 "
+            "'설교 스크립트 직접 붙여넣기' 칸에 유튜브 스크립트를 붙여넣고 다시 저장해 보세요."
+        )
         raise
 
 if __name__ == "__main__":
