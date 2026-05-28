@@ -53,13 +53,22 @@ body:
     validations:
       required: false
 
+  - type: textarea
+    id: transcript
+    attributes:
+      label: 설교 스크립트 직접 붙여넣기
+      description: 유튜브 영상 직접 처리가 503 오류로 실패할 때 사용합니다. 유튜브 스크립트나 기존 전사문을 붙여넣으면 영상 처리를 건너뛰고 이 본문을 분석합니다.
+      placeholder: "여기에 유튜브 스크립트 또는 설교 전사문을 붙여넣으세요. 비워두면 Gemini가 유튜브 URL 직접 처리를 시도합니다."
+    validations:
+      required: false
+
   - type: input
     id: max_minutes
     attributes:
       label: 최대 처리 시간(분)
-      description: 처음에는 15 또는 30으로 테스트하고, 성공하면 60으로 늘리세요.
-      placeholder: "30"
-      value: "30"
+      description: 스크립트를 붙여넣은 경우에는 사용하지 않습니다. 유튜브 URL 직접 처리 때만 사용합니다.
+      placeholder: "15"
+      value: "15"
     validations:
       required: true
 
@@ -67,7 +76,7 @@ body:
     id: segment_minutes
     attributes:
       label: 구간 길이(분)
-      description: Gemini 혼잡 오류를 줄이기 위해 5분을 권장합니다.
+      description: 스크립트를 붙여넣은 경우에는 사용하지 않습니다. 유튜브 URL 직접 처리 때만 사용합니다.
       placeholder: "5"
       value: "5"
     validations:
