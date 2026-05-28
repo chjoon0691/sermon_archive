@@ -1,0 +1,83 @@
+name: 새 설교 등록
+description: 유튜브 설교 영상을 설교 아카이브에 추가합니다.
+title: "[설교등록] "
+labels: ["sermon-request"]
+body:
+  - type: input
+    id: youtube_url
+    attributes:
+      label: 유튜브 주소
+      description: 공개 YouTube 영상 주소를 입력하세요.
+      placeholder: "https://www.youtube.com/watch?v=..."
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: 설교 제목
+      placeholder: "예: 하나님이 세우시는 인생 멘토"
+    validations:
+      required: true
+
+  - type: input
+    id: speaker
+    attributes:
+      label: 설교자
+      placeholder: "예: 이찬수 목사"
+    validations:
+      required: false
+
+  - type: input
+    id: bible_text
+    attributes:
+      label: 본문
+      placeholder: "예: 디모데후서 1:1-3"
+    validations:
+      required: false
+
+  - type: input
+    id: church
+    attributes:
+      label: 교회/채널
+      placeholder: "예: 분당우리교회"
+    validations:
+      required: false
+
+  - type: input
+    id: sermon_date
+    attributes:
+      label: 설교 날짜
+      description: 모르면 비워두세요. YYYY-MM-DD 형식을 권장합니다.
+      placeholder: "2026-05-17"
+    validations:
+      required: false
+
+  - type: input
+    id: max_minutes
+    attributes:
+      label: 최대 처리 시간(분)
+      description: 처음에는 15 또는 30으로 테스트하고, 성공하면 60으로 늘리세요.
+      placeholder: "30"
+      value: "30"
+    validations:
+      required: true
+
+  - type: input
+    id: segment_minutes
+    attributes:
+      label: 구간 길이(분)
+      description: Gemini 혼잡 오류를 줄이기 위해 5분을 권장합니다.
+      placeholder: "5"
+      value: "5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: memo
+    attributes:
+      label: 메모
+      description: 참고할 내용이 있으면 적으세요.
+      placeholder: "예: 예화 추출을 자세히 해주세요."
+    validations:
+      required: false
