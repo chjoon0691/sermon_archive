@@ -2,45 +2,46 @@ name: Process sermon archive request
 
 on:
   issues:
-    types: [opened, edited, labeled]
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "다시 처리할 Issue 번호"
+        required: true
 
 permissions:
   contents: write
   issues: write
 
+concurrency:
+  group: sermon-archive-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  cancel-in-progress: false
+
 jobs:
   process:
-    if: contains(github.event.issue.labels.*.name, 'sermon-request')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.issue.title, '[설교등록]')
     runs-on: ubuntu-latest
     timeout-minutes: 120
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install google-genai python-slugify PyGithub
-
       - name: Process sermon with Gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GEMINI_MODELS: gemini-2.5-flash-lite,gemini-2.5-flash
-        run: |
-          python scripts/process_sermon_issue.py
-
+          RUN_MODE: single
+        run: python scripts/process_sermon_issue.py
       - name: Commit archive files
         run: |
           git config user.name "sermon-archive-bot"
@@ -49,6 +50,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Add sermon archive from issue #${{ github.event.issue.number }}"
+            git commit -m "Add sermon archive from issue #${{ github.event.issue.number || github.event.inputs.issue_number }}"
             git push
           fi
